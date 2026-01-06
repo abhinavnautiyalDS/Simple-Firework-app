@@ -13,7 +13,7 @@ let ashes = [];
 let smoke = [];
 let startTime = null;
 
-const BURN_DURATION = 15000; // 15 seconds
+const BURN_DURATION = 30000; // 15 seconds
 
 beginBtn.onclick = () => {
   if (!input.value.trim()) return;
