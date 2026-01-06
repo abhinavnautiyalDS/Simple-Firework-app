@@ -1,7 +1,11 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background: #000;
-  color: white;
+  color: #fff;
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
@@ -15,24 +19,34 @@ body {
   z-index: 10;
 }
 
-input, button {
+input {
+  padding: 10px 12px;
+  font-size: 16px;
+  width: 220px;
+}
+
+button {
   padding: 10px 14px;
   font-size: 16px;
+  margin-left: 6px;
+  cursor: pointer;
 }
 
 canvas {
   margin-top: 20px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  background: transparent;
+  box-shadow: 0 25px 70px rgba(0,0,0,0.9);
 }
 
+/* Ending screen */
 #ending {
   position: fixed;
   inset: 0;
-  background: black;
+  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 30px;
   opacity: 0;
   transition: opacity 2s ease;
   pointer-events: none;
