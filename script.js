@@ -9,6 +9,9 @@ const ending = document.getElementById("ending");
 
 
 
+
+
+
 let burning = false;
 let burnPoints = [];
 let ashes = [];
