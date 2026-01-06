@@ -14,16 +14,15 @@ body {
   overflow: hidden;
 }
 
-/* UI controls */
 .ui {
-  margin-top: 16px;
+  margin-top: 20px;
   z-index: 10;
 }
 
 input {
-  padding: 10px 14px;
+  padding: 10px 12px;
   font-size: 16px;
-  width: 240px;
+  width: 220px;
 }
 
 button {
@@ -33,14 +32,10 @@ button {
   cursor: pointer;
 }
 
-/* Big cinematic canvas */
 canvas {
-  margin-top: 16px;
-  width: 90vw;          /* responsive width */
-  height: 85vh;         /* tall immersive view */
-  max-width: 900px;     /* prevent too wide */
+  margin-top: 20px;
   background: transparent;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.9);
+  box-shadow: 0 25px 70px rgba(0,0,0,0.9);
 }
 
 /* Ending screen */
@@ -51,7 +46,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 30px;
   opacity: 0;
   transition: opacity 2s ease;
   pointer-events: none;
