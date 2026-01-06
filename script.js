@@ -1,87 +1,132 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const btn = document.getElementById("beginBtn");
+
 const input = document.getElementById("nameInput");
+const beginBtn = document.getElementById("beginBtn");
+const resetBtn = document.getElementById("resetBtn");
 const fireSound = document.getElementById("fireSound");
 const ending = document.getElementById("ending");
 
-let burnRadius = 0;
 let burning = false;
+let burnPoints = [];
 let ashes = [];
+let smoke = [];
+let startTime = null;
 
-btn.onclick = () => {
+const BURN_DURATION = 15000; // 15 seconds
+
+beginBtn.onclick = () => {
   if (!input.value.trim()) return;
-
-  start();
+  startBurn();
 };
 
-function start() {
-  burnRadius = 0;
-  ashes = [];
+resetBtn.onclick = resetAll;
+
+/* ======================
+   CORE FLOW
+====================== */
+function startBurn() {
+  resetAll();
   burning = true;
+  startTime = performance.now();
+
+  // Multiple random ignition points
+  burnPoints = Array.from({ length: 3 }).map(() => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: 4
+  }));
 
   fireSound.currentTime = 0;
   fireSound.play();
 
   if (navigator.vibrate) {
-    navigator.vibrate([100, 50, 100]);
+    navigator.vibrate([120, 80, 120]);
   }
 
   requestAnimationFrame(loop);
 }
 
-function loop() {
+function resetAll() {
+  burning = false;
+  burnPoints = [];
+  ashes = [];
+  smoke = [];
+  startTime = null;
+  ending.style.opacity = 0;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+/* ======================
+   MAIN LOOP
+====================== */
+function loop(t) {
   if (!burning) return;
+
+  const progress = Math.min((t - startTime) / BURN_DURATION, 1);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Paper
-  ctx.fillStyle = "#f5f1e8";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawPaper();
+  drawText();
 
-  // Text
-  ctx.font = "48px Caveat";
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "center";
-  ctx.fillText(input.value, canvas.width / 2, canvas.height / 2);
-
-  // Burn mask
+  // Burn erosion
   ctx.globalCompositeOperation = "destination-out";
-  ctx.beginPath();
-  ctx.arc(0, canvas.height, burnRadius, 0, Math.PI * 2);
-  ctx.fill();
-
+  burnPoints.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+    p.r += 0.7; // slow erosion
+  });
   ctx.globalCompositeOperation = "source-over";
 
-  // Fire glow
-  drawFire(burnRadius);
-
-  // Ash
+  drawFlames();
   spawnAsh();
   updateAsh();
+  spawnSmoke();
+  updateSmoke();
 
-  burnRadius += 2;
-
-  if (burnRadius < 900) {
+  if (progress < 1) {
     requestAnimationFrame(loop);
   } else {
     endScene();
   }
 }
 
-function drawFire(r) {
-  ctx.beginPath();
-  ctx.arc(0, canvas.height, r + 15, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,120,0,0.25)";
-  ctx.fill();
+/* ======================
+   DRAWING
+====================== */
+function drawPaper() {
+  ctx.fillStyle = "#f4f0e6";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+function drawText() {
+  ctx.font = "48px Caveat";
+  ctx.fillStyle = "#111";
+  ctx.textAlign = "center";
+  ctx.fillText(input.value, canvas.width / 2, canvas.height / 2);
+}
+
+/* 🔥 Yellow flames */
+function drawFlames() {
+  burnPoints.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r + 10, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 190, 70, 0.25)";
+    ctx.fill();
+  });
+}
+
+/* ======================
+   ASH PARTICLES
+====================== */
 function spawnAsh() {
-  if (Math.random() < 0.3) {
+  if (Math.random() < 0.25) {
     ashes.push({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      vy: Math.random() * 1 + 0.5,
+      vy: Math.random() * 1.2 + 0.4,
       a: 1
     });
   }
@@ -90,16 +135,51 @@ function spawnAsh() {
 function updateAsh() {
   ashes.forEach(p => {
     p.y += p.vy;
-    p.a -= 0.01;
-
-    ctx.fillStyle = `rgba(180,180,180,${p.a})`;
+    p.a -= 0.012;
+    ctx.fillStyle = `rgba(160,160,160,${p.a})`;
     ctx.fillRect(p.x, p.y, 2, 2);
   });
-
   ashes = ashes.filter(p => p.a > 0);
 }
 
+/* ======================
+   SMOKE PARTICLES
+====================== */
+function spawnSmoke() {
+  if (Math.random() < 0.35) {
+    smoke.push({
+      x: Math.random() * canvas.width,
+      y: canvas.height,
+      vy: Math.random() * -0.6 - 0.2,
+      r: Math.random() * 12 + 6,
+      a: 0.35
+    });
+  }
+}
+
+function updateSmoke() {
+  smoke.forEach(s => {
+    s.y += s.vy;
+    s.r += 0.18;
+    s.a -= 0.004;
+
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(120,120,120,${s.a})`;
+    ctx.fill();
+  });
+
+  smoke = smoke.filter(s => s.a > 0);
+}
+
+/* ======================
+   ENDING + AUTO RESET
+====================== */
 function endScene() {
   burning = false;
   ending.style.opacity = 1;
+
+  setTimeout(() => {
+    resetAll();
+  }, 3500);
 }
