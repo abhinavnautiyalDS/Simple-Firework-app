@@ -20,6 +20,9 @@ beginBtn.onclick = () => {
   startBurn();
 };
 
+
+
+
 resetBtn.onclick = resetAll;
 
 /* ======================
