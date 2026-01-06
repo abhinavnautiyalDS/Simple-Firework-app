@@ -13,15 +13,26 @@ let ashes = [];
 let smoke = [];
 let startTime = null;
 
-const BURN_DURATION = 30000; // 15 seconds
+const BURN_DURATION = 15000; // 15 seconds
 
+/* ======================
+   CANVAS RESIZE
+====================== */
+function resizeCanvas() {
+  canvas.width = canvas.clientWidth * window.devicePixelRatio;
+  canvas.height = canvas.clientHeight * window.devicePixelRatio;
+  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+/* ======================
+   BUTTONS
+====================== */
 beginBtn.onclick = () => {
   if (!input.value.trim()) return;
   startBurn();
 };
-
-
-
 
 resetBtn.onclick = resetAll;
 
@@ -33,11 +44,11 @@ function startBurn() {
   burning = true;
   startTime = performance.now();
 
-  // Multiple random ignition points
+  // Multiple ignition points
   burnPoints = Array.from({ length: 3 }).map(() => ({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    r: 4
+    x: Math.random() * canvas.clientWidth,
+    y: Math.random() * canvas.clientHeight,
+    r: 6
   }));
 
   fireSound.currentTime = 0;
@@ -73,15 +84,44 @@ function loop(t) {
   drawPaper();
   drawText();
 
-  // Burn erosion
-  ctx.globalCompositeOperation = "destination-out";
+  /* 🔥 Charred edge */
   burnPoints.forEach(p => {
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fill();
-    p.r += 0.7; // slow erosion
+    ctx.arc(p.x, p.y, p.r + 4, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(60,30,10,0.8)";
+    ctx.lineWidth = 4;
+    ctx.stroke();
   });
-  ctx.globalCompositeOperation = "source-over";
+
+  /* 🔥 Erosion with jagged edges */
+  if (progress > 0.08) {
+    ctx.globalCompositeOperation = "destination-out";
+
+    burnPoints.forEach(p => {
+      ctx.beginPath();
+      const steps = 40;
+
+      for (let i = 0; i <= steps; i++) {
+        const angle = (i / steps) * Math.PI * 2;
+        const noise = Math.random() * 8;
+        const r = p.r + noise;
+
+        const x = p.x + Math.cos(angle) * r;
+        const y = p.y + Math.sin(angle) * r;
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+
+      ctx.closePath();
+      ctx.fill();
+
+      p.r += 0.25;               // slow burn
+      p.r = Math.min(p.r, 220);  // prevent giant holes
+    });
+
+    ctx.globalCompositeOperation = "source-over";
+  }
 
   drawFlames();
   spawnAsh();
@@ -101,34 +141,46 @@ function loop(t) {
 ====================== */
 function drawPaper() {
   ctx.fillStyle = "#f4f0e6";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 }
 
 function drawText() {
   ctx.font = "48px Caveat";
   ctx.fillStyle = "#111";
   ctx.textAlign = "center";
-  ctx.fillText(input.value, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(
+    input.value,
+    canvas.clientWidth / 2,
+    canvas.clientHeight / 2
+  );
 }
 
-/* 🔥 Yellow flames */
+/* 🔥 Edge flames */
 function drawFlames() {
   burnPoints.forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r + 10, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 190, 70, 0.25)";
-    ctx.fill();
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = p.r + Math.random() * 6;
+
+      const x = p.x + Math.cos(angle) * r;
+      const y = p.y + Math.sin(angle) * r;
+
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,180,40,0.35)";
+      ctx.fill();
+    }
   });
 }
 
 /* ======================
-   ASH PARTICLES
+   ASH
 ====================== */
 function spawnAsh() {
   if (Math.random() < 0.25) {
     ashes.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
+      x: Math.random() * canvas.clientWidth,
+      y: Math.random() * canvas.clientHeight,
       vy: Math.random() * 1.2 + 0.4,
       a: 1
     });
@@ -139,50 +191,4 @@ function updateAsh() {
   ashes.forEach(p => {
     p.y += p.vy;
     p.a -= 0.012;
-    ctx.fillStyle = `rgba(160,160,160,${p.a})`;
-    ctx.fillRect(p.x, p.y, 2, 2);
-  });
-  ashes = ashes.filter(p => p.a > 0);
-}
-
-/* ======================
-   SMOKE PARTICLES
-====================== */
-function spawnSmoke() {
-  if (Math.random() < 0.35) {
-    smoke.push({
-      x: Math.random() * canvas.width,
-      y: canvas.height,
-      vy: Math.random() * -0.6 - 0.2,
-      r: Math.random() * 12 + 6,
-      a: 0.35
-    });
-  }
-}
-
-function updateSmoke() {
-  smoke.forEach(s => {
-    s.y += s.vy;
-    s.r += 0.18;
-    s.a -= 0.004;
-
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(120,120,120,${s.a})`;
-    ctx.fill();
-  });
-
-  smoke = smoke.filter(s => s.a > 0);
-}
-
-/* ======================
-   ENDING + AUTO RESET
-====================== */
-function endScene() {
-  burning = false;
-  ending.style.opacity = 1;
-
-  setTimeout(() => {
-    resetAll();
-  }, 3500);
-}
+    ctx.fillStyle = `rgba(160,16
